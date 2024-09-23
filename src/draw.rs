@@ -1,3 +1,5 @@
+use std::vec;
+
 use ggez::{glam::{vec2, Vec2}, graphics::{self, Color, PxScale, Rect, TextFragment}, Context, GameError};
 
 use crate::PieceImages;
@@ -15,7 +17,7 @@ pub fn draw_repeated_elements(canvas: &mut graphics::Canvas, elements: [&str; 8]
        if i % 2 == 0{
            color = Color::WHITE;
        }
-       let mut drawParam = ggez::glam::Vec2::new((i*90+60+10) as f32, 690.0);
+       let mut drawParam = ggez::glam::Vec2::new((i*90+70) as f32, 690.0);
        if direction == Direction::Vertical{
            drawParam = ggez::glam::Vec2::new(2., (632-i*90) as f32);
        }
@@ -99,4 +101,19 @@ pub fn draw_board_rectangles(canvas: &mut graphics::Canvas, ctx: &Context) -> Re
             canvas.draw(&rectangle, Vec2::new((j*90) as f32, (i*90) as f32));
         }
     })
+}
+
+//returns x,y
+fn get_index_pos(index: u32) -> (u32, u32){
+    return ((index as u32 % 8)*90+45, index/8*90+45);
+}
+
+pub fn draw_highlighted_squares(canvas: &mut graphics::Canvas, ctx: &Context, to_draw: &Vec<u32>) -> Result<(), GameError>{
+    Ok((
+        for index in to_draw{
+            let (x, y) = get_index_pos(*index);
+            let circle = graphics::Mesh::new_circle(ctx, graphics::DrawMode::fill(), Vec2::new(0., 0.), 15., 0.2, Color::RED)?;
+            canvas.draw(&circle, Vec2::new(x as f32, y as f32))
+        }
+    ))
 }

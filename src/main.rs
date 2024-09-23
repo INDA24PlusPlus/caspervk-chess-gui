@@ -2,8 +2,10 @@
 
 use std::{env, path};
 
-use draw::{draw_board_indexing, draw_board_pieces, draw_board_rectangles};
+use chess_lib::{Move, Position};
+use draw::{draw_board_indexing, draw_board_pieces, draw_board_rectangles, draw_highlighted_squares};
 use ggez::conf::FullscreenType;
+use ggez::event::MouseButton;
 use ggez::{context, event, GameError};
 use ggez::graphics::{self, Color, DrawParam, Drawable, Mesh, PxScale, Rect, TextFragment};
 use ggez::{Context, GameResult};
@@ -27,7 +29,12 @@ struct PieceImages{
 }
 struct MainState {
     board: chess_lib::Game,
-    piece_images: PieceImages
+    piece_images: PieceImages,
+    mouse_down: bool,
+    mouse_down_x: f32,
+    mouse_down_y: f32,
+    highlighted_movements: Option<Vec<u32>>,
+    selected_piece_index: Option<usize>
 }
 
 impl MainState {
@@ -52,15 +59,68 @@ impl MainState {
             white_king: graphics::Image::from_path(ctx, "/k_white.png")?,
             white_queen: graphics::Image::from_path(ctx, "/q_white.png")?,
             white_pawn: graphics::Image::from_path(ctx, "/p_white.png")?,
-            }
+            },
+            mouse_down: false,
+            mouse_down_x: 0.,
+            mouse_down_y: 0.,
+            highlighted_movements: None,
+            selected_piece_index: None
         
         };
         return Ok(s);
     }
 }
 
+fn get_pos_index(x: f32, y: f32) -> usize{
+    return ((x) / 90.).floor() as usize + (y / 90.).floor() as usize * 8;
+}
+
 impl event::EventHandler<ggez::GameError> for MainState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
+        Ok(())
+    }
+
+    fn mouse_button_down_event(
+        &mut self,
+        _ctx: &mut Context,
+        button: MouseButton,
+        x: f32,
+        y: f32,
+    ) -> GameResult {
+        self.mouse_down_x = x;
+        self.mouse_down_y = y;
+        Ok(())
+    }
+    fn mouse_button_up_event(
+        &mut self,
+        _ctx: &mut Context,
+        button: MouseButton,
+        x: f32,
+        y: f32,
+    ) -> GameResult {
+        self.mouse_down = false;
+        if(x == self.mouse_down_x && y == self.mouse_down_y){ // click
+            if(self.highlighted_movements.is_none()){
+                let index = get_pos_index(x, y);
+                let selectedPiece = self.board.get_board()[index];
+                if(!selectedPiece.is_none() && selectedPiece.unwrap().colour == self.board.get_active_colour()){
+                    let mut positions = Vec::new();
+                    for square in self.board.get_legal_moves_from(chess_lib::Position::new_from_idx(index).unwrap()).as_ref().unwrap().iter(){
+                        positions.push(square.to.idx as u32);
+                    }
+                    self.highlighted_movements = Some(positions);
+                    self.selected_piece_index = Some(index);
+                }
+            }
+            else{
+                let index = get_pos_index(x, y);
+                if(self.highlighted_movements.as_ref().unwrap().iter().any(|&a| a == index as u32)){
+                    self.board.make_move(Move::new(&self.board, Position::new_from_idx(self.selected_piece_index.unwrap()).unwrap(), Position::new_from_idx(index).unwrap()).unwrap());
+                    self.highlighted_movements = None;
+                    self.selected_piece_index = None;
+                }
+            }
+        }
         Ok(())
     }
 
@@ -72,6 +132,9 @@ impl event::EventHandler<ggez::GameError> for MainState {
         draw_board_rectangles(&mut canvas, &ctx);
         draw_board_indexing(&mut canvas, &ctx);
         draw_board_pieces(&mut canvas, self.board.get_board(), &self.piece_images);
+        if(!self.highlighted_movements.is_none()){
+            draw_highlighted_squares(&mut canvas, &ctx, self.highlighted_movements.as_ref().unwrap());
+        }
 
 
         canvas.finish(ctx)?;
