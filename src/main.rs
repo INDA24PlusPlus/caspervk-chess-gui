@@ -1,8 +1,9 @@
 
 
+use std::time::Instant;
 use std::{env, path};
 
-use chess_lib::{Move, Position};
+use chess_lib::{GameState, Move, Position};
 use draw::{draw_board_indexing, draw_board_pieces, draw_board_rectangles, draw_highlighted_squares};
 use ggez::conf::FullscreenType;
 use ggez::event::MouseButton;
@@ -34,7 +35,8 @@ struct MainState {
     mouse_down_x: f32,
     mouse_down_y: f32,
     highlighted_movements: Option<Vec<u32>>,
-    selected_piece_index: Option<usize>
+    selected_piece_index: Option<usize>,
+    last_click_time: Instant,
 }
 
 impl MainState {
@@ -64,7 +66,8 @@ impl MainState {
             mouse_down_x: 0.,
             mouse_down_y: 0.,
             highlighted_movements: None,
-            selected_piece_index: None
+            selected_piece_index: None,
+            last_click_time: Instant::now(),
         
         };
         return Ok(s);
@@ -99,7 +102,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
         y: f32,
     ) -> GameResult {
         self.mouse_down = false;
-        if(x == self.mouse_down_x && y == self.mouse_down_y){ // click
+        if(x == self.mouse_down_x && y == self.mouse_down_y && self.last_click_time.elapsed().as_millis() > 50){ // click
+            self.last_click_time = Instant::now();
             if(self.highlighted_movements.is_none()){
                 let index = get_pos_index(x, y);
                 let selectedPiece = self.board.get_board()[index];
@@ -116,9 +120,9 @@ impl event::EventHandler<ggez::GameError> for MainState {
                 let index = get_pos_index(x, y);
                 if(self.highlighted_movements.as_ref().unwrap().iter().any(|&a| a == index as u32)){
                     self.board.make_move(Move::new(&self.board, Position::new_from_idx(self.selected_piece_index.unwrap()).unwrap(), Position::new_from_idx(index).unwrap()).unwrap());
-                    self.highlighted_movements = None;
-                    self.selected_piece_index = None;
                 }
+                self.highlighted_movements = None;
+                self.selected_piece_index = None;
             }
         }
         Ok(())
@@ -134,6 +138,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
         draw_board_pieces(&mut canvas, self.board.get_board(), &self.piece_images);
         if(!self.highlighted_movements.is_none()){
             draw_highlighted_squares(&mut canvas, &ctx, self.highlighted_movements.as_ref().unwrap());
+        }
+        if(self.board.get_game_state() == GameState::GameOver){
         }
 
 

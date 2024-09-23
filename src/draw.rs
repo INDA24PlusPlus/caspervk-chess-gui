@@ -117,3 +117,7 @@ pub fn draw_highlighted_squares(canvas: &mut graphics::Canvas, ctx: &Context, to
         }
     ))
 }
+
+pub fn draw_game_over_window(canvas: &mut graphics::Canvas, ctx: &Context, text: String){
+    
+}
