@@ -119,5 +119,46 @@ pub fn draw_highlighted_squares(canvas: &mut graphics::Canvas, ctx: &Context, to
 }
 
 pub fn draw_game_over_window(canvas: &mut graphics::Canvas, ctx: &Context, text: String){
-    
+    let bounds = Rect::new(0.0, 0.0, 300.0, 130.0);
+    let rectangle = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), bounds , Color::RED).unwrap();
+    canvas.draw(&rectangle, Vec2::new(220., 260.));
+    canvas.draw(
+        &graphics::Text::new(TextFragment{
+            text: text,
+            font: Some("LiberationMono".into()),
+            color: Some(Color::BLACK),
+            scale: Some(PxScale::from(32.0)),
+        }), Vec2::new(295., 310.)
+);
+}
+
+pub fn draw_promotion_selection_window(canvas: &mut graphics::Canvas, ctx: &Context, color: chess_lib::Colour, piece_images: &PieceImages){
+    let bounds = Rect::new(0.0, 0.0, 300.0, 130.0);
+    let rectangle = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), bounds , Color::RED).unwrap();
+    canvas.draw(&rectangle, Vec2::new(220., 260.));
+    if(color.is_black()){
+        canvas.draw(&piece_images.black_queen, ggez::glam::Vec2::new(255 as f32, 295.0));
+        canvas.draw(&piece_images.black_knight, ggez::glam::Vec2::new(315 as f32, 295.0));
+        canvas.draw(&piece_images.black_rook, ggez::glam::Vec2::new(375 as f32, 295.0));
+        canvas.draw(&piece_images.black_bishop, ggez::glam::Vec2::new(435 as f32, 295.0));
+    }
+    else{
+        canvas.draw(&piece_images.white_queen, ggez::glam::Vec2::new(255 as f32, 295.0));
+        canvas.draw(&piece_images.white_knight, ggez::glam::Vec2::new(315 as f32, 295.0));
+        canvas.draw(&piece_images.white_rook, ggez::glam::Vec2::new(375 as f32, 295.0));
+        canvas.draw(&piece_images.white_bishop, ggez::glam::Vec2::new(435 as f32, 295.0));
+    }
+}
+
+pub fn draw_request_draw_button(canvas: &mut graphics::Canvas, ctx: &Context){
+    let bounds = Rect::new(0.0, 0.0, 140.0, 50.0);
+    let rectangle = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), bounds , Color::RED).unwrap();
+    canvas.draw(&rectangle, Vec2::new(745., 310.));
+    canvas.draw(
+        &graphics::Text::new(TextFragment{
+            text: "Request draw".to_string(),
+            font: Some("LiberationMono".into()),
+            color: Some(Color::BLACK),
+            scale: Some(PxScale::from(20.0)),
+        }), Vec2::new(750., 328.));
 }

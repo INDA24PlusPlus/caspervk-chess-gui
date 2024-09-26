@@ -3,10 +3,11 @@
 use std::time::Instant;
 use std::{env, path};
 
-use chess_lib::{GameState, Move, Position};
-use draw::{draw_board_indexing, draw_board_pieces, draw_board_rectangles, draw_highlighted_squares};
+use chess_lib::{Colour, GameOverReason, GameState, Move, Position};
+use draw::{draw_board_indexing, draw_board_pieces, draw_board_rectangles, draw_game_over_window, draw_highlighted_squares, draw_promotion_selection_window, draw_request_draw_button};
 use ggez::conf::FullscreenType;
 use ggez::event::MouseButton;
+use ggez::mint::Point2;
 use ggez::{context, event, GameError};
 use ggez::graphics::{self, Color, DrawParam, Drawable, Mesh, PxScale, Rect, TextFragment};
 use ggez::{Context, GameResult};
@@ -37,6 +38,8 @@ struct MainState {
     highlighted_movements: Option<Vec<u32>>,
     selected_piece_index: Option<usize>,
     last_click_time: Instant,
+    awaiting_promotion_choice: bool,
+    move_to_make_after_promotion: Option<chess_lib::Move>,
 }
 
 impl MainState {
@@ -68,7 +71,8 @@ impl MainState {
             highlighted_movements: None,
             selected_piece_index: None,
             last_click_time: Instant::now(),
-        
+            awaiting_promotion_choice: false,        
+            move_to_make_after_promotion: None,
         };
         return Ok(s);
     }
@@ -104,25 +108,61 @@ impl event::EventHandler<ggez::GameError> for MainState {
         self.mouse_down = false;
         if(x == self.mouse_down_x && y == self.mouse_down_y && self.last_click_time.elapsed().as_millis() > 50){ // click
             self.last_click_time = Instant::now();
-            if(self.highlighted_movements.is_none()){
-                let index = get_pos_index(x, y);
-                let selectedPiece = self.board.get_board()[index];
-                if(!selectedPiece.is_none() && selectedPiece.unwrap().colour == self.board.get_active_colour()){
-                    let mut positions = Vec::new();
-                    for square in self.board.get_legal_moves_from(chess_lib::Position::new_from_idx(index).unwrap()).as_ref().unwrap().iter(){
-                        positions.push(square.to.idx as u32);
-                    }
-                    self.highlighted_movements = Some(positions);
-                    self.selected_piece_index = Some(index);
+            if(self.awaiting_promotion_choice){
+                let mut promotion_choice = None;
+                if(Rect::new(255., 295., 55., 55.).contains(Point2{x, y})){
+                    promotion_choice = Some(chess_lib::PieceType::Queen);
+                }
+                if(Rect::new(315., 295., 55., 55.).contains(Point2{x, y})){
+                    promotion_choice = Some(chess_lib::PieceType::Knight);
+                }
+                if(Rect::new(375., 295., 55., 55.).contains(Point2{x, y})){
+                    promotion_choice = Some(chess_lib::PieceType::Rook);
+                }
+                if(Rect::new(435., 295., 55., 55.).contains(Point2{x, y})){
+                    promotion_choice = Some(chess_lib::PieceType::Bishop);
+                }
+                if(!promotion_choice.is_none()){
+                    self.move_to_make_after_promotion.unwrap().promotion_choice = promotion_choice;
+                    self.board.make_move(self.move_to_make_after_promotion.unwrap());
+                    self.move_to_make_after_promotion = None;
+                    self.awaiting_promotion_choice = false;
                 }
             }
             else{
                 let index = get_pos_index(x, y);
-                if(self.highlighted_movements.as_ref().unwrap().iter().any(|&a| a == index as u32)){
-                    self.board.make_move(Move::new(&self.board, Position::new_from_idx(self.selected_piece_index.unwrap()).unwrap(), Position::new_from_idx(index).unwrap()).unwrap());
+                if(Rect::new(743., 306., 141., 52.).contains(Point2{x, y})){
+                    self.board.submit_draw();
                 }
-                self.highlighted_movements = None;
-                self.selected_piece_index = None;
+                if(x > 700.){
+                    return Ok(());
+                }
+                if(self.highlighted_movements.is_none()){
+                    println!("{}", index);
+                    let selectedPiece = self.board.get_board()[index];
+                    if(!selectedPiece.is_none() && selectedPiece.unwrap().colour == self.board.get_active_colour()){
+                        let mut positions = Vec::new();
+                        for square in self.board.get_legal_moves_from(chess_lib::Position::new_from_idx(index).unwrap()).as_ref().unwrap().iter(){
+                            positions.push(square.to.idx as u32);
+                        }
+                        self.highlighted_movements = Some(positions);
+                        self.selected_piece_index = Some(index);
+                    }
+                }
+                else{
+                    if(!self.highlighted_movements.is_none() && self.highlighted_movements.as_ref().unwrap().iter().any(|&a| a == index as u32)){
+                        let mv = Move::new(&self.board, Position::new_from_idx(self.selected_piece_index.unwrap()).unwrap(), Position::new_from_idx(index).unwrap()).unwrap();
+                        if(mv.is_promotion()){
+                            self.awaiting_promotion_choice = true;
+                            self.move_to_make_after_promotion = Some(mv);
+                        }
+                        else{
+                            self.board.make_move(Move::new(&self.board, Position::new_from_idx(self.selected_piece_index.unwrap()).unwrap(), Position::new_from_idx(index).unwrap()).unwrap());
+                        }
+                    }
+                    self.highlighted_movements = None;
+                    self.selected_piece_index = None;
+                }
             }
         }
         Ok(())
@@ -140,7 +180,27 @@ impl event::EventHandler<ggez::GameError> for MainState {
             draw_highlighted_squares(&mut canvas, &ctx, self.highlighted_movements.as_ref().unwrap());
         }
         if(self.board.get_game_state() == GameState::GameOver){
+            let mut string_to_draw;
+            match self.board.get_game_over_reason().unwrap(){
+                GameOverReason::Checkmate => {
+                    if(self.board.get_active_colour() == Colour::White){
+                        string_to_draw = "White won by checkmate!";
+                    }
+                    else{
+                        string_to_draw = "Black won by checkmate!";
+                    }
+                },
+                GameOverReason::FivefoldRepetitionRule => {string_to_draw = "Draw by five fold repetition"},
+                GameOverReason::SeventyFiveMoveRule => {string_to_draw = "Draw by seventy five move rule"},
+                GameOverReason::Stalemate => {string_to_draw = "Drawby stale mate"},
+                _ => {panic!()}
+            }
+            draw_game_over_window(&mut canvas, ctx, String::from(string_to_draw));
         }
+        if(self.awaiting_promotion_choice){
+            draw_promotion_selection_window(&mut canvas, ctx, self.board.get_active_colour(), &self.piece_images);
+        }
+        draw_request_draw_button(&mut canvas, ctx);
 
 
         canvas.finish(ctx)?;
@@ -150,7 +210,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
 
 pub fn main() -> GameResult {
     let window_mode = ggez::conf::WindowMode{
-        width: 720.0,
+        width: 900.0,
         height: 720.0,
         maximized: false,
         fullscreen_type: FullscreenType::Windowed,
