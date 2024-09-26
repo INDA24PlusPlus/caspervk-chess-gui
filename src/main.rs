@@ -123,8 +123,9 @@ impl event::EventHandler<ggez::GameError> for MainState {
                     promotion_choice = Some(chess_lib::PieceType::Bishop);
                 }
                 if(!promotion_choice.is_none()){
-                    self.move_to_make_after_promotion.unwrap().promotion_choice = promotion_choice;
-                    self.board.make_move(self.move_to_make_after_promotion.unwrap());
+                    let mut mv = self.move_to_make_after_promotion.unwrap();
+                    mv.promotion_choice = promotion_choice;
+                    self.board.make_move(mv);
                     self.move_to_make_after_promotion = None;
                     self.awaiting_promotion_choice = false;
                 }
