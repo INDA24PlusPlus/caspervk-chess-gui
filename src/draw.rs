@@ -1,10 +1,9 @@
 use std::vec;
 
+use chess_lib::GameOverReason;
 use ggez::{glam::{vec2, Vec2}, graphics::{self, Color, PxScale, Rect, TextFragment}, Context, GameError};
 
 use crate::PieceImages;
-
-
 
 #[derive(PartialEq)]
 pub enum Direction {
@@ -118,13 +117,25 @@ pub fn draw_highlighted_squares(canvas: &mut graphics::Canvas, ctx: &Context, to
     ))
 }
 
-pub fn draw_game_over_window(canvas: &mut graphics::Canvas, ctx: &Context, text: String){
+pub fn draw_game_over_window(canvas: &mut graphics::Canvas, ctx: &Context, game_over_reason: GameOverReason, color: chess_lib::Colour){
+    let text = match game_over_reason{
+        GameOverReason::Checkmate => {
+            match color {
+                chess_lib::Colour::White => "White won by checkmate!",
+                chess_lib::Colour::Black => "Black won by checkmate!"
+            }
+        },
+        GameOverReason::FivefoldRepetitionRule => "Draw by five fold repetition",
+        GameOverReason::SeventyFiveMoveRule => "Draw by seventy five move rule",
+        GameOverReason::Stalemate => "Drawby stale mate",
+        _ => {panic!()}
+    };
     let bounds = Rect::new(0.0, 0.0, 300.0, 130.0);
     let rectangle = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), bounds , Color::RED).unwrap();
     canvas.draw(&rectangle, Vec2::new(220., 260.));
     canvas.draw(
         &graphics::Text::new(TextFragment{
-            text: text,
+            text: String::from(text),
             font: Some("LiberationMono".into()),
             color: Some(Color::BLACK),
             scale: Some(PxScale::from(32.0)),
