@@ -28,6 +28,7 @@ pub fn do_move(stream: &mut TcpStream, _move: chess_lib::Move, promotion: Option
     stream.write_all(&Vec::try_from(to_write).unwrap());
     let mut buf = [0u8; 512];
     loop {
+        println!("yo");
         stream.read(&mut buf);
         match chess_networking::Ack::try_from(&buf[..]){
             Ok(_Ack) => {
@@ -38,13 +39,13 @@ pub fn do_move(stream: &mut TcpStream, _move: chess_lib::Move, promotion: Option
     }
 }
 
-pub fn await_move(stream: &mut TcpStream) -> (u8, u8, Option<chess_networking::PromotionPiece>){
+pub fn await_move(stream: &mut TcpStream) -> (chess_networking::Move){
     let mut buf = [0u8; 512];
     loop {
         stream.read(&mut buf);
         match chess_networking::Move::try_from(&buf[..]){
             Ok(_Move) => {
-                return (_Move.from.0, _Move.from.1, _Move.promotion);
+                return (_Move);
             },
             _ => {}
         }
@@ -65,6 +66,7 @@ pub fn start_server(port: &str, name: &str) -> (TcpStream, Option<String>){
         println!("Failed to setup listener on port {}", port);
     }
     let (mut stream, _addr) = connection.unwrap().accept().unwrap();
+    stream.set_nonblocking(true);
     
     let start = chess_networking::Start{
         is_white: false,
@@ -78,11 +80,8 @@ pub fn start_server(port: &str, name: &str) -> (TcpStream, Option<String>){
 }
 
 pub fn start_client(ip: &str, name: &str) -> (TcpStream, Option<String>, chess_lib::Colour){
-    let connection = TcpListener::bind(ip);
-    if connection.is_err() {
-        println!("Failed to connect to {}", ip);
-    }
-    let (mut stream, _addr) = connection.unwrap().accept().unwrap();
+    let mut stream = TcpStream::connect(ip).unwrap();
+    stream.set_nonblocking(true);
     let mut buf = [0u8; 512];
     loop {
         stream.read(&mut buf);

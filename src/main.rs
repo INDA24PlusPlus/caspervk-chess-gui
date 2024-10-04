@@ -54,17 +54,22 @@ struct MainState {
 impl MainState {
     fn new(ctx: &mut Context) -> GameResult<MainState> {
         let args: Vec<_> = env::args().collect();
-        let stream;
+        let mut stream;
         let mut opponent_name;
         let mut player_side = chess_lib::Colour::White; // Who doesnt want to start white:)
+        println!(" {} {} ", args[2], args[3]);
+        let mut board = chess_lib::Game::new();
         if(args.len() < 3){
             return GameResult::Err((GameError::CustomError("Invalid command line arguments.".to_string())));
         }
-        if(args[0] == "s"){
+        if(args[1] == "s"){
             (stream, opponent_name) = start_server(&args[2], &args[3]);
         }
-        else if(args[0] == "c"){
+        else if(args[1] == "c"){
             (stream, opponent_name, player_side) = start_client(&args[2], &args[3]);
+            let _Move = await_move(&mut stream);
+            board.make_move(Move::new(&board, Position::new(_Move.from.0 as usize, _Move.from.1 as usize).unwrap(), Position::new(_Move.to.0 as usize, _Move.to.1 as usize).unwrap()).unwrap());
+            send_ack(&mut stream, true, None);
         }
         else{
             return GameResult::Err((GameError::CustomError("Invalid command line arguments. Please select if server or client with s or c as first argument".to_string())));
@@ -75,7 +80,7 @@ impl MainState {
             graphics::FontData::from_path(ctx, "/LiberationMono-Regular.ttf")?,
         );
         let mut s = MainState { 
-            board: chess_lib::Game::new(), 
+            board: board, 
             piece_images: PieceImages{
             black_rook: graphics::Image::from_path(ctx, "/r_black.png")?,
             black_knight: graphics::Image::from_path(ctx, "/n_black.png")?,
@@ -129,7 +134,7 @@ fn get_selected_promotion(x: f32, y: f32) -> Option<chess_lib::PieceType>{
 
 impl MainState{
     fn is_click(&mut self, x: f32, y: f32) -> bool{
-        if(x == self.mouse_down_x && y == self.mouse_down_y && !self.last_click_time.elapsed().as_millis() > 50){
+        if(x == self.mouse_down_x && y == self.mouse_down_y && !self.last_click_time.elapsed().as_millis() < 50){
             return false;
         }
         self.last_click_time = Instant::now();
@@ -169,8 +174,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
                     let (ok, gamestate) = do_move(&mut self.stream, mv, None);
                     if(self.player_side == chess_lib::Colour::White || ok){
                         self.board.make_move(mv);
-                        let (from, to, promotion) = await_move(&mut self.stream); // opponent move
-                        let result = self.board.make_move(Move::new(&self.board, Position::new_from_idx(from as usize).unwrap(), Position::new_from_idx(to as usize).unwrap()).unwrap());
+                        let _Move = await_move(&mut self.stream); // opponent move
+                        let result = self.board.make_move(Move::new(&self.board, Position::new(_Move.from.0 as usize, _Move.from.1 as usize).unwrap(), Position::new(_Move.to.0 as usize, _Move.to.1 as usize).unwrap()).unwrap());
                         send_ack(&mut self.stream, result.is_err(), chess_lib_state_to_network_state(self.board.get_game_state()));
                     }
                     self.move_to_make_after_promotion = None;
@@ -207,8 +212,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
                             let (ok, gamestate) = do_move(&mut self.stream, mv, None);
                             if(self.player_side == chess_lib::Colour::White || ok){
                                 self.board.make_move(Move::new(&self.board, Position::new_from_idx(self.selected_piece_index.unwrap()).unwrap(), Position::new_from_idx(index).unwrap()).unwrap());
-                                let (from, to, promotion) = await_move(&mut self.stream); // opponent move
-                                let result = self.board.make_move(Move::new(&self.board, Position::new_from_idx(from as usize).unwrap(), Position::new_from_idx(to as usize).unwrap()).unwrap());
+                                let _Move = await_move(&mut self.stream); // opponent move
+                                let result = self.board.make_move(Move::new(&self.board, Position::new(_Move.from.0 as usize, _Move.from.1 as usize).unwrap(), Position::new(_Move.to.0 as usize, _Move.to.1 as usize).unwrap()).unwrap());
                                 send_ack(&mut self.stream, result.is_err(), chess_lib_state_to_network_state(self.board.get_game_state()));
                             }
                         }
