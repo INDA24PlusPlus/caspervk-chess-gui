@@ -53,6 +53,7 @@ pub fn await_move(stream: &mut TcpStream) -> (chess_networking::Move){
 }
 
 pub fn send_ack(stream: &mut TcpStream, valid_move: bool, state: Option<chess_networking::GameState>){
+    println!("valid move: {}", valid_move);
     let to_write = chess_networking::Ack{
         ok: valid_move,
         end_state: state
@@ -66,7 +67,6 @@ pub fn start_server(port: &str, name: &str) -> (TcpStream, Option<String>){
         println!("Failed to setup listener on port {}", port);
     }
     let (mut stream, _addr) = connection.unwrap().accept().unwrap();
-    stream.set_nonblocking(true);
     
     let start = chess_networking::Start{
         is_white: false,
@@ -81,7 +81,6 @@ pub fn start_server(port: &str, name: &str) -> (TcpStream, Option<String>){
 
 pub fn start_client(ip: &str, name: &str) -> (TcpStream, Option<String>, chess_lib::Colour){
     let mut stream = TcpStream::connect(ip).unwrap();
-    stream.set_nonblocking(true);
     let mut buf = [0u8; 512];
     loop {
         stream.read(&mut buf);

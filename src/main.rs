@@ -214,7 +214,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
                                 self.board.make_move(Move::new(&self.board, Position::new_from_idx(self.selected_piece_index.unwrap()).unwrap(), Position::new_from_idx(index).unwrap()).unwrap());
                                 let _Move = await_move(&mut self.stream); // opponent move
                                 let result = self.board.make_move(Move::new(&self.board, Position::new(_Move.from.1 as usize, _Move.from.0 as usize).unwrap(), Position::new(_Move.to.1 as usize, _Move.to.0 as usize).unwrap()).unwrap());
-                                send_ack(&mut self.stream, result.is_err(), chess_lib_state_to_network_state(self.board.get_game_state()));
+                                send_ack(&mut self.stream, !result.is_err(), chess_lib_state_to_network_state(self.board.get_game_state()));
                             }
                         }
                     }
