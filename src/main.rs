@@ -68,7 +68,7 @@ impl MainState {
         else if(args[1] == "c"){
             (stream, opponent_name, player_side) = start_client(&args[2], &args[3]);
             let _Move = await_move(&mut stream);
-            board.make_move(Move::new(&board, Position::new(_Move.from.0 as usize, _Move.from.1 as usize).unwrap(), Position::new(_Move.to.0 as usize, _Move.to.1 as usize).unwrap()).unwrap());
+            board.make_move(Move::new(&board, Position::new(_Move.from.1 as usize, _Move.from.0 as usize).unwrap(), Position::new(_Move.to.1 as usize, _Move.to.0 as usize).unwrap()).unwrap());
             send_ack(&mut stream, true, None);
         }
         else{
@@ -175,7 +175,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
                     if(self.player_side == chess_lib::Colour::White || ok){
                         self.board.make_move(mv);
                         let _Move = await_move(&mut self.stream); // opponent move
-                        let result = self.board.make_move(Move::new(&self.board, Position::new(_Move.from.0 as usize, _Move.from.1 as usize).unwrap(), Position::new(_Move.to.0 as usize, _Move.to.1 as usize).unwrap()).unwrap());
+                        let result = self.board.make_move(Move::new(&self.board, Position::new(_Move.from.1 as usize, _Move.from.0 as usize).unwrap(), Position::new(_Move.to.1 as usize, _Move.to.0 as usize).unwrap()).unwrap());
                         send_ack(&mut self.stream, result.is_err(), chess_lib_state_to_network_state(self.board.get_game_state()));
                     }
                     self.move_to_make_after_promotion = None;
@@ -213,7 +213,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
                             if(self.player_side == chess_lib::Colour::White || ok){
                                 self.board.make_move(Move::new(&self.board, Position::new_from_idx(self.selected_piece_index.unwrap()).unwrap(), Position::new_from_idx(index).unwrap()).unwrap());
                                 let _Move = await_move(&mut self.stream); // opponent move
-                                let result = self.board.make_move(Move::new(&self.board, Position::new(_Move.from.0 as usize, _Move.from.1 as usize).unwrap(), Position::new(_Move.to.0 as usize, _Move.to.1 as usize).unwrap()).unwrap());
+                                let result = self.board.make_move(Move::new(&self.board, Position::new(_Move.from.1 as usize, _Move.from.0 as usize).unwrap(), Position::new(_Move.to.1 as usize, _Move.to.0 as usize).unwrap()).unwrap());
                                 send_ack(&mut self.stream, result.is_err(), chess_lib_state_to_network_state(self.board.get_game_state()));
                             }
                         }

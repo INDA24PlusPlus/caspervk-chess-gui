@@ -12,6 +12,7 @@ pub fn chess_lib_state_to_network_state(state: chess_lib::GameState) -> Option<c
     }
 }
 pub fn do_move(stream: &mut TcpStream, _move: chess_lib::Move, promotion: Option<chess_networking::PromotionPiece>) -> (bool, Option<chess_networking::GameState>){
+    println!("{} {} {} {}", _move.from.file, _move.from.rank, _move.to.file, _move.to.rank);
     let to_write = chess_networking::Move {
         from: (
             _move.from.file as u8,
@@ -28,7 +29,6 @@ pub fn do_move(stream: &mut TcpStream, _move: chess_lib::Move, promotion: Option
     stream.write_all(&Vec::try_from(to_write).unwrap());
     let mut buf = [0u8; 512];
     loop {
-        println!("yo");
         stream.read(&mut buf);
         match chess_networking::Ack::try_from(&buf[..]){
             Ok(_Ack) => {
